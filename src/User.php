@@ -125,4 +125,48 @@ class User {
             return [];
         }
     }
+
+    /**
+     * Çalışanları ad, soyad, TCKN veya sicil no'ya göre arar.
+     * @param string $term
+     * @return array
+     */
+    public function findUserById($id) {
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM users WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetch();
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return null;
+        }
+    }
+
+    public function searchEmployees($term) {
+        try {
+            $term = "%" . $term . "%";
+            $query = "
+                SELECT u.id, u.first_name, u.last_name, u.tckn, u.staff_id, c.company_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                LEFT JOIN companies c ON u.company_id = c.id
+                WHERE r.role_name = 'Alt Kullanıcı' AND (
+                    u.first_name LIKE :term OR
+                    u.last_name LIKE :term OR
+                    u.tckn LIKE :term OR
+                    u.staff_id LIKE :term OR
+                    CONCAT(u.first_name, ' ', u.last_name) LIKE :term
+                )
+                LIMIT 10
+            ";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':term', $term);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return [];
+        }
+    }
 }

@@ -143,3 +143,35 @@ INSERT INTO `roles` (`role_name`) VALUES
 ('Tedarikçi'),
 ('Alt Kullanıcı'),
 ('Evrak Kontrol / Güvenlik');
+
+-- Ziyaretçiler Tablosu
+CREATE TABLE visitors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    company VARCHAR(255),
+    visiting_department VARCHAR(255),
+    reason_for_visit TEXT,
+    entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    exit_time TIMESTAMP NULL,
+    recorded_by INT NOT NULL,
+    FOREIGN KEY (recorded_by) REFERENCES users(id)
+);
+
+-- Kullanıcılara QR kod token'ı eklemesi
+ALTER TABLE users ADD COLUMN qr_code_token VARCHAR(255) UNIQUE AFTER phone;
+
+-- Saha Uygunsuzlukları Tablosu
+CREATE TABLE non_conformities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    photo_path VARCHAR(255),
+    description TEXT NOT NULL,
+    category VARCHAR(100),
+    severity ENUM('Düşük', 'Orta', 'Yüksek', 'Kritik'),
+    status ENUM('Bildirildi', 'İnceleniyor', 'Atandı', 'Çözüldü', 'Kapatıldı') DEFAULT 'Bildirildi',
+    reported_by INT NOT NULL,
+    assigned_to INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (reported_by) REFERENCES users(id),
+    FOREIGN KEY (assigned_to) REFERENCES users(id)
+);
