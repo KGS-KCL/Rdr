@@ -101,4 +101,28 @@ class User {
         return $userRole === $roles;
     }
 
+    /**
+     * Sistemdeki tüm çalışanları (Alt Kullanıcıları) getirir.
+     * @return array
+     */
+    public function getAllEmployees() {
+        try {
+            // 'Alt Kullanıcı' rolünün ID'sini bul
+            $role_stmt = $this->db->prepare("SELECT id FROM roles WHERE role_name = 'Alt Kullanıcı'");
+            $role_stmt->execute();
+            $role = $role_stmt->fetch();
+
+            if (!$role) {
+                return []; // Rol bulunamazsa boş dizi döndür
+            }
+
+            $stmt = $this->db->prepare("SELECT id, first_name, last_name, tckn FROM users WHERE role_id = :role_id ORDER BY first_name, last_name");
+            $stmt->bindParam(':role_id', $role['id'], PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return [];
+        }
+    }
 }
