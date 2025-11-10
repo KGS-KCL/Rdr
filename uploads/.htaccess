@@ -1,0 +1,2 @@
+# Bu dizindeki tüm dosyalara doğrudan web erişimini engelle.
+Deny from all

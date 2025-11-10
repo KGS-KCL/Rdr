@@ -13,8 +13,16 @@ if (!User::hasRole(['Süper Admin', 'ISG Uzmanı'])) {
 $user_handler = new User();
 $training_handler = new Training();
 
-$employees = $user_handler->getAllEmployees();
-$all_trainings = $training_handler->getAllTrainings();
+$factory_id = Session::get('factory_id');
+if(!$factory_id && User::hasRole('Süper Admin')) {
+    // Süper admin bir fabrika seçmediyse, bu sayfada işlem yapamaz.
+    // Veya tüm fabrikaların eğitimlerini yönetmek için ayrı bir arayüz tasarlanabilir.
+    // Şimdilik, bir fabrika bağlamında çalışmasını sağlıyoruz.
+    die('Lütfen önce bir fabrika bağlamında oturum açın.');
+}
+
+$employees = $user_handler->getAllEmployees(); // Bu metot zaten session'daki factory_id'yi kullanıyor.
+$all_trainings = $training_handler->getAllTrainingsByFactory($factory_id);
 
 $selected_employee_id = null;
 $assigned_training_ids = [];

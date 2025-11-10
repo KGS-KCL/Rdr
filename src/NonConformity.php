@@ -55,6 +55,25 @@ class NonConformity {
      * @param int $factory_id
      * @return array
      */
+    public function findById($id, $factory_id) {
+        try {
+            $query = "
+                SELECT nc.*
+                FROM non_conformities nc
+                JOIN users u ON nc.reported_by = u.id
+                WHERE nc.id = :id AND u.factory_id = :factory_id
+            ";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->bindParam(':factory_id', $factory_id, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return null;
+        }
+    }
+
     public function getAll($factory_id) {
         try {
             $query = "

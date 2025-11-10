@@ -11,6 +11,45 @@ class Document {
     }
 
     /**
+     * Yeni bir evrak kaydı oluşturur ve dosyasını yükler.
+     * @param array $data
+     * @param array $file
+     * @param int $factory_id
+     * @return bool
+     */
+    public function create($data, $file, $factory_id) {
+        $file_path = null;
+        if (isset($file['document']) && $file['document']['error'] === UPLOAD_ERR_OK) {
+            $upload_dir = __DIR__ . '/../uploads/' . $factory_id . '/documents/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+            $filename = uniqid() . '-' . basename($file['document']['name']);
+            $file_path = $filename; // Sadece dosya adını sakla
+
+            if (!move_uploaded_file($file['document']['tmp_name'], $upload_dir . $filename)) {
+                return false; // Yükleme başarısız olursa işlemi durdur
+            }
+        } else {
+            return false; // Dosya yoksa veya hatalıysa işlemi durdur
+        }
+
+        try {
+            $query = "INSERT INTO documents (user_id, document_type_id, file_path, expires_at)
+                      VALUES (:user_id, :document_type_id, :file_path, :expires_at)";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
+            $stmt->bindParam(':document_type_id', $data['document_type_id'], PDO::PARAM_INT);
+            $stmt->bindParam(':file_path', $file_path);
+            $stmt->bindParam(':expires_at', $data['expires_at']);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Belirli bir fabrikadaki tüm kullanıcı evraklarını detaylı bilgi ile getirir.
      * @param int $factory_id
      * @return array

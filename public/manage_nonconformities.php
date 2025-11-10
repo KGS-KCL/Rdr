@@ -3,23 +3,24 @@ ob_start();
 require_once __DIR__ . '/../src/NonConformity.php';
 require_once __DIR__ . '/../templates/dashboard_header.php';
 
-// Yetki kontrolü
 if (!User::hasRole(['Süper Admin', 'ISG Uzmanı'])) {
     header("Location: index.php");
     exit();
 }
 
+$factory_id = Session::get('factory_id');
+if (empty($factory_id)) {
+    die('Bu panele erişim için bir fabrika seçimi gereklidir.');
+}
+
 $handler = new NonConformity();
-$all_reports = $handler->getAll();
+$all_reports = $handler->getAll($factory_id);
 ?>
 
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Uygunsuzluk Yönetim Paneli</h1>
 
     <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Tüm Bildirimler</h6>
-        </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-bordered">
@@ -27,11 +28,9 @@ $all_reports = $handler->getAll();
                         <tr>
                             <th>Fotoğraf</th>
                             <th>Açıklama</th>
-                            <th>Kategori</th>
-                            <th>Önem</th>
+                            <th>Kategori / Önem</th>
                             <th>Durum</th>
-                            <th>Bildiren</th>
-                            <th>Tarih</th>
+                            <th>Bildiren / Tarih</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -39,17 +38,21 @@ $all_reports = $handler->getAll();
                             <tr>
                                 <td>
                                     <?php if ($report['photo_path']): ?>
-                                        <a href="/uploads/<?php echo htmlspecialchars($report['photo_path']); ?>" target="_blank">
+                                        <a href="serve_file.php?type=non_conformity&id=<?php echo $report['id']; ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                                             Görüntüle
                                         </a>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo htmlspecialchars($report['description']); ?></td>
-                                <td><?php echo htmlspecialchars($report['category']); ?></td>
-                                <td><?php echo htmlspecialchars($report['severity']); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($report['category']); ?><br>
+                                    <small class="text-muted"><?php echo htmlspecialchars($report['severity']); ?></small>
+                                </td>
                                 <td><span class="badge bg-info"><?php echo htmlspecialchars($report['status']); ?></span></td>
-                                <td><?php echo htmlspecialchars($report['first_name'] . ' ' . $report['last_name']); ?></td>
-                                <td><?php echo date('d/m/Y H:i', strtotime($report['created_at'])); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($report['first_name'] . ' ' . $report['last_name']); ?><br>
+                                    <small><?php echo date('d/m/Y H:i', strtotime($report['created_at'])); ?></small>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
