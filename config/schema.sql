@@ -1,4 +1,14 @@
 -- KGS ISG Yönetim Sistemi Veritabanı Şeması
+-- KGS ISG Yönetim Sistemi Veritabanı Şeması (Multi-Tenant Mimarisi)
+
+-- Fabrikalar (Müşteriler) Tablosu
+CREATE TABLE factories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    factory_name VARCHAR(255) NOT NULL,
+    user_limit INT DEFAULT 10,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Roller Tablosu
 CREATE TABLE roles (
@@ -175,3 +185,20 @@ CREATE TABLE non_conformities (
     FOREIGN KEY (reported_by) REFERENCES users(id),
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
+
+-- Multi-Tenant Yapılandırması için ALTER TABLE ifadeleri
+ALTER TABLE users ADD COLUMN factory_id INT NULL AFTER role_id;
+ALTER TABLE users ADD FOREIGN KEY (factory_id) REFERENCES factories(id) ON DELETE CASCADE;
+
+ALTER TABLE companies ADD COLUMN factory_id INT NOT NULL AFTER is_active;
+ALTER TABLE companies ADD FOREIGN KEY (factory_id) REFERENCES factories(id) ON DELETE CASCADE;
+
+ALTER TABLE document_types ADD COLUMN factory_id INT NOT NULL AFTER created_by;
+ALTER TABLE document_types ADD FOREIGN KEY (factory_id) REFERENCES factories(id) ON DELETE CASCADE;
+
+-- documents tablosu dolaylı olarak user üzerinden bağlı olduğu için factory_id'ye ihtiyaç duymaz.
+
+ALTER TABLE trainings ADD COLUMN factory_id INT NOT NULL AFTER created_by;
+ALTER TABLE trainings ADD FOREIGN KEY (factory_id) REFERENCES factories(id) ON DELETE CASCADE;
+
+-- gate_logs, training_assignments, visitors, non_conformities tabloları da dolaylı olarak user/recorded_by üzerinden fabrikaya bağlıdır.

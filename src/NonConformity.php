@@ -11,24 +11,25 @@ class NonConformity {
     }
 
     /**
-     * Yeni bir uygunsuzluk kaydı oluşturur.
+     * Yeni bir uygunsuzluk kaydı oluşturur (factory_id ve dosya izolasyonu ile).
      * @param array $data
      * @param array|null $file
+     * @param int $factory_id
      * @return bool
      */
-    public function create($data, $file) {
+    public function create($data, $file, $factory_id) {
         $photo_path = null;
         if (isset($file['photo']) && $file['photo']['error'] === UPLOAD_ERR_OK) {
-            // Güvenli dosya yükleme mantığı
-            $upload_dir = __DIR__ . '/../uploads/non_conformities/';
+            // Fabrikaya özel dosya yolu oluştur
+            $upload_dir = __DIR__ . '/../uploads/' . $factory_id . '/non_conformities/';
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
             }
             $filename = uniqid() . '-' . basename($file['photo']['name']);
-            $photo_path = 'non_conformities/' . $filename;
+            // Veritabanına sadece dosya adını kaydet, yol programatik olarak oluşturulacak
+            $photo_path = $filename;
 
             if (!move_uploaded_file($file['photo']['tmp_name'], $upload_dir . $filename)) {
-                // Yükleme başarısız olursa null olarak devam et
                 $photo_path = null;
             }
         }
@@ -50,18 +51,21 @@ class NonConformity {
     }
 
     /**
-     * Tüm uygunsuzlukları detaylı bilgi ile getirir.
+     * Belirli bir fabrikadaki tüm uygunsuzlukları getirir.
+     * @param int $factory_id
      * @return array
      */
-    public function getAll() {
+    public function getAll($factory_id) {
         try {
             $query = "
                 SELECT nc.*, u.first_name, u.last_name
                 FROM non_conformities nc
                 JOIN users u ON nc.reported_by = u.id
+                WHERE u.factory_id = :factory_id
                 ORDER BY nc.created_at DESC
             ";
             $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':factory_id', $factory_id, PDO::PARAM_INT);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -69,5 +73,4 @@ class NonConformity {
             return [];
         }
     }
-
 }

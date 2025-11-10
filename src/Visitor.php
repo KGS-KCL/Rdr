@@ -13,10 +13,12 @@ class Visitor {
     /**
      * Yeni bir ziyaretçi kaydı oluşturur.
      * @param array $data
+     * @param int $factory_id
      * @return bool
      */
-    public function createVisitor($data) {
+    public function createVisitor($data, $factory_id) {
         try {
+            // `recorded_by` kullanıcısının o fabrikaya ait olduğunu varsayıyoruz.
             $query = "INSERT INTO visitors (full_name, company, visiting_department, reason_for_visit, recorded_by)
                       VALUES (:full_name, :company, :visiting_department, :reason_for_visit, :recorded_by)";
             $stmt = $this->db->prepare($query);
@@ -33,12 +35,20 @@ class Visitor {
     }
 
     /**
-     * Henüz çıkış yapmamış tüm ziyaretçileri getirir.
+     * Belirli bir fabrikadaki aktif ziyaretçileri getirir.
+     * @param int $factory_id
      * @return array
      */
-    public function getActiveVisitors() {
+    public function getActiveVisitors($factory_id) {
         try {
-            $stmt = $this->db->prepare("SELECT * FROM visitors WHERE exit_time IS NULL ORDER BY entry_time DESC");
+            $query = "
+                SELECT v.* FROM visitors v
+                JOIN users u ON v.recorded_by = u.id
+                WHERE v.exit_time IS NULL AND u.factory_id = :factory_id
+                ORDER BY v.entry_time DESC
+            ";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':factory_id', $factory_id, PDO::PARAM_INT);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -48,30 +58,23 @@ class Visitor {
     }
 
     /**
-     * Tüm ziyaretçi kayıtlarını (geçmiş ve aktif) getirir.
-     * @return array
-     */
-    public function getAllVisitors() {
-        try {
-            $stmt = $this->db->prepare("SELECT * FROM visitors ORDER BY entry_time DESC");
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log($e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Bir ziyaretçinin çıkış saatini güncelleyerek çıkış yaptığını işaretler.
+     * Bir ziyaretçinin çıkışını işaretler (factory_id kontrolü ile).
      * @param int $visitor_id
+     * @param int $factory_id
      * @return bool
      */
-    public function markAsExited($visitor_id) {
+    public function markAsExited($visitor_id, $factory_id) {
         try {
-            $query = "UPDATE visitors SET exit_time = CURRENT_TIMESTAMP WHERE id = :id AND exit_time IS NULL";
+            // Sadece o fabrikaya ait bir güvenlik görevlisinin kaydettiği ziyaretçiyi güncelleyebilmesini sağla
+            $query = "
+                UPDATE visitors v
+                JOIN users u ON v.recorded_by = u.id
+                SET v.exit_time = CURRENT_TIMESTAMP
+                WHERE v.id = :visitor_id AND v.exit_time IS NULL AND u.factory_id = :factory_id
+            ";
             $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':id', $visitor_id, PDO::PARAM_INT);
+            $stmt->bindParam(':visitor_id', $visitor_id, PDO::PARAM_INT);
+            $stmt->bindParam(':factory_id', $factory_id, PDO::PARAM_INT);
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log($e->getMessage());
